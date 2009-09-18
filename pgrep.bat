@@ -15,7 +15,7 @@ goto endofperl
 
 ###############################################################################
 ##                                                                           ##
-##    "pgrep" (= "perl grep") version 1.2 (17-Sep-2009)                      ##
+##    "pgrep" (= "perl grep") version 1.3 (18-Sep-2009)                      ##
 ##                                                                           ##
 ##    Copyright (c) 1998 - 2009 by Steffen Beyer. All rights reserved.       ##
 ##                                                                           ##
@@ -63,10 +63,10 @@ if ($@)
     else                       { die "$self: $@"; }
 }
 
-if (@ARGV) { @ARGV = map( {glob}            @ARGV ) if $^O eq 'MSWin32'; }
-else       { @ARGV = map( {s/[\n\r]+$//;$_}   <>  );                     }
-
 $skip = 0;
+if (@ARGV) { @ARGV = map( {glob}            @ARGV ) if $^O eq 'MSWin32'; }
+else       { @ARGV = map( {s/[\n\r]+$//;$_}   <>  ); $skip  =         1; } # STDIN already exhausted
+
 while (@ARGV)
 {
     $name = 1;

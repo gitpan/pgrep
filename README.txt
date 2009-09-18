@@ -30,8 +30,11 @@ use the double dash "--" to signify the end of the options list first:
 
 Example: pgrep -- - pgrep*
 
+Note that wildcards in filenames also work under Windows (but only
+on the command line).
+
 Note that you can also pass a list of filenames to this script via
-STDIN to grep through:
+STDIN to grep through (no wildcards are expanded in this case):
 
 Example: find . -type f -print | pgrep <perlregexp> | more
 
