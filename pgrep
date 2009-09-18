@@ -1,0 +1,214 @@
+#!perl
+
+###############################################################################
+##                                                                           ##
+##    "pgrep" (= "perl grep") version 1.4 (18-Sep-2009)                      ##
+##                                                                           ##
+##    Copyright (c) 1998 - 2009 by Steffen Beyer. All rights reserved.       ##
+##                                                                           ##
+##    This program is free software; you can redistribute it                 ##
+##    and/or modify it under the same terms as Perl itself.                  ##
+##                                                                           ##
+###############################################################################
+
+$self = $0;
+$self =~ s!^.*[/\\:]!!;
+$self =~ s!\.+[^.]*$!!;
+
+$HELP = <<"VERBATIM";
+
+Usage: $self [-i|-l|-v|-ilv] <perlregexp> [<filename>|-]
+
+Items in square brackets mean "omit or repeat as often as you like".
+Items in angle brackets are placeholders for the corresponding items.
+The pipe symbol "|" means "or".
+
+A filename of "-" means to grep through "STDIN".
+
+This tool accepts the usual options for "grep":
+
+    -i    ignore case
+    -l    list filenames only
+    -v    invert results (output files or lines NOT matching)
+    --    end of options
+
+The letter options can also be combined, e.g. as in "-li", in any
+order and combination you like.
+
+In the rare case that the <perlregexp> starts with a minus sign,
+in order for it not to be confused with an (invalid) option, use
+the double dash "--" to signify the end of the options list first:
+
+Example: $self -- - ${self}*
+
+Note that wildcards in filenames also work under Windows (but only
+on the command line).
+
+Note that you can also pass a list of filenames to this script via
+STDIN to grep through (no wildcards are expanded in this case):
+
+Example: find . -type f -print | $self <perlregexp> | more
+
+This will grep through the CONTENTS of the files returned by "find".
+
+The following will grep through the NAMES of the files returned by
+"find":
+
+Example: find . -type f -print | $self <perlregexp> - | more
+
+BEWARE (counter-intuitive!) that the dash "-" filename is absolutely
+essential whenever you are filtering the output of some program:
+
+Example: <someprogram> | $self -<options> <perlregexp> - | more
+
+Mnemonic: Each pipe "|" (before) needs its junction "-" (behind)!
+
+Version: 1.4
+
+VERBATIM
+
+$ignore_case    = 0;
+$list_filenames = 0;
+$invert_result  = 0;
+
+OPTION:
+while (@ARGV)
+{
+    last OPTION if (substr($ARGV[0],0,1) ne '-');
+    $_ = shift;
+    last OPTION if ($_ eq '--');
+    if (/^-[ilv]+$/)
+    {
+        if (/i/) { $ignore_case    = 1; }
+        if (/l/) { $list_filenames = 1; }
+        if (/v/) { $invert_result  = 1; }
+    }
+    else { die "$self: unknown option '$_' encountered!\n$HELP"; }
+}
+
+die $HELP unless (@ARGV);
+
+$reg_exp = shift;
+
+$_ = '';
+eval { /$reg_exp/o };
+if ($@)
+{
+    if ($@ =~ /^(.+?)\s+at\s/) { die "$self: $1!\n"; }
+    else                       { die "$self: $@";    }
+}
+
+$skip = 0;
+if (@ARGV) { @ARGV = map( {glob}            @ARGV ) if $^O eq 'MSWin32'; }
+else       { @ARGV = map( {s/[\n\r]+$//;$_}   <>  ); $skip  =         1; } # STDIN already exhausted
+
+select(STDERR); $| = 1; # force a flush immediately after every write to STDERR
+select(STDOUT); $| = 1; # force a flush immediately after every write to STDOUT
+
+FILE:
+while (@ARGV)
+{
+    $name = 1;
+    $file = shift;
+    $flag = $list_filenames;
+    if ($file eq '-')
+    {
+        next FILE if ($skip);
+        $skip = 1; # STDIN can only be read once
+        $name = 0; # There is no filename associated with STDIN to print
+        $flag = 0; # Listing the names of the (non-) matching files makes no sense for STDIN
+    }
+    else
+    {
+        unless (-f $file)
+        {
+            warn "$self: file '$file' does not exist!\n";
+            next FILE;
+        }
+    }
+    unless (open(FH, "<$file"))
+    {
+        warn "$self: unable to open file '$file': $!\n";
+        next FILE;
+    }
+    if ($invert_result)
+    {
+        if ($flag)
+        {
+            $nomatch = 1;
+            if ($ignore_case)
+            {
+                LINE_vli:
+                while (<FH>)
+                {
+                    if (/$reg_exp/io) { $nomatch = 0; last LINE_vli; }
+                }
+            }
+            else # if ($ignore_case)
+            {
+                LINE_vl_:
+                while (<FH>)
+                {
+                    if (/$reg_exp/o)  { $nomatch = 0; last LINE_vl_; }
+                }
+            }
+            if ($nomatch) { print "$file\n"; }
+        }
+        else # if ($flag)
+        {
+            if ($ignore_case)
+            {
+                LINE_v_i:
+                while (<FH>)
+                {
+                    unless (/$reg_exp/io)
+                    {
+                        if ($name) { print "$file:$_"; } else { print; }
+                    }
+                }
+            }
+            else # if ($ignore_case)
+            {
+                LINE_v__:
+                while (<FH>)
+                {
+                    unless (/$reg_exp/o)
+                    {
+                        if ($name) { print "$file:$_"; } else { print; }
+                    }
+                }
+            }
+        }
+    }
+    else # if ($invert_result)
+    {
+        if ($ignore_case)
+        {
+            LINE__xi:
+            while (<FH>)
+            {
+                if (/$reg_exp/io)
+                {
+                    if ($flag) {              print "$file\n";    last LINE__xi;  }
+                    else       { if ($name) { print "$file:$_"; } else { print; } }
+                }
+            }
+        }
+        else # if ($ignore_case)
+        {
+            LINE__x_:
+            while (<FH>)
+            {
+                if (/$reg_exp/o)
+                {
+                    if ($flag) {              print "$file\n";    last LINE__x_;  }
+                    else       { if ($name) { print "$file:$_"; } else { print; } }
+                }
+            }
+        }
+    }
+    close(FH);
+}
+
+__END__
+

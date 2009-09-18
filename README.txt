@@ -22,11 +22,12 @@ This tool accepts the usual options for "grep":
     -v    invert results (output files or lines NOT matching)
     --    end of options
 
-These options can also be combined, e.g. as in "-li", in any
+The letter options can also be combined, e.g. as in "-li", in any
 order and combination you like.
 
 In the rare case that the <perlregexp> starts with a minus sign,
-use the double dash "--" to signify the end of the options list first:
+in order for it not to be confused with an (invalid) option, use
+the double dash "--" to signify the end of the options list first:
 
 Example: pgrep -- - pgrep*
 
@@ -45,7 +46,15 @@ The following will grep through the NAMES of the files returned by
 
 Example: find . -type f -print | pgrep <perlregexp> - | more
 
-The tool prints a usage if called without any parameters at all.
+BEWARE (counter-intuitive!) that the dash "-" filename is absolutely
+essential whenever you are filtering the output of some program:
+
+Example: <someprogram> | pgrep -<options> <perlregexp> - | more
+
+Mnemonic: Each pipe "|" (before) needs its junction "-" (behind)!
+
+The tool prints a help text if called without parameters or with
+invalid options.
 
 For more information on "grep", see also its corresponding manual
 pages ("man grep", "man egrep") on your (UNIX) system.
@@ -53,20 +62,30 @@ pages ("man grep", "man egrep") on your (UNIX) system.
 Note that this tool is not restricted to UNIX platforms, though,
 it will run wherever Perl does!
 
-Just install this tool somewhere in your search path, e.g.
-"/usr/local/bin" or "C:\Windows\System32".
+In order to install this script, type the following commands:
 
-Don't forget to adjust the shell-bang line (the first line of the script)
-of the Perl script "pgrep.pl" to match the path where Perl is installed on
-your UNIX system (this is not necessary for the Windows version "pgrep.bat"),
-and set the file permissions to "executable", e.g. with "chmod 555 pgrep.pl".
+    UNIX:                         Windows:
 
-You may also want to remove the ".pl" file extension in order to save you
-some typing when using it.
+    perl Makefile.PL              perl Makefile.PL
+    make install                  nmake install
 
-Non-UNIX and non-Windows users please refer to the documentation of their
-Perl installation for instructions on how to install Perl scripts as
-executable applications.
+This is the recommended method. Alternatively, just move or copy
+the file "pgrep" to somewhere in your search path.
+
+Before doing so, under UNIX, don't forget to edit "pgrep" and to
+adjust the shell-bang line (the first line of the script) to match
+the path where the "perl" binary is located on your system.
+
+Then proceed as follows (illustrative example):
+
+    UNIX:                         Windows:
+
+    chmod 555 pgrep               pl2bat pgrep
+    cp -p pgrep /usr/local/bin    copy pgrep.bat C:\Windows\System32
+
+Non-UNIX and non-Windows users please refer to the documentation
+of your Perl installation for instructions on how to install Perl
+scripts as executable applications if none of the above works.
 
 Enjoy!
 --
